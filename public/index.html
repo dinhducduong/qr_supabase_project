@@ -1,0 +1,76 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Scanner - Đóng Hàng</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm" type="module"></script>
+
+</head>
+<body>
+  <h1>Quét mã QR để đóng hàng</h1>
+  <div id="reader" style="width: 300px;"></div>
+  <button id="startBtn">Bắt đầu quét mã</button>
+  <button id="retryBtn" style="display:none;">Quét lại</button>
+  <button id="nextBtn" style="display:none;">Đơn hàng tiếp theo</button>
+
+  <audio id="startAudio" src="/bat-dau-dong-hang.mp3"></audio>
+  <audio id="beepAudio" src="/tieng_bip_mot_tieng.mp3"></audio>
+
+  <script>
+    let html5QrCode;
+    let currentCode = "";
+    let startTime = "";
+    const startAudio = document.getElementById("startAudio");
+    const beepAudio = document.getElementById("beepAudio");
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      html5QrCode = new Html5Qrcode("reader");
+      const devices = await Html5Qrcode.getCameras();
+      const backCamera = devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
+      html5QrCode.start(
+        backCamera.id,
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => {
+          if (qrCodeMessage !== currentCode) {
+            currentCode = qrCodeMessage;
+            beepAudio.play();
+            startAudio.play();
+            startTime = new Date().toISOString();
+            document.getElementById("retryBtn").style.display = "inline";
+            document.getElementById("nextBtn").style.display = "inline";
+            html5QrCode.stop();
+            fetch('/api/log', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ qr_code: currentCode, start_time: startTime, pause_time: null })
+            });
+          }
+        }
+      );
+    });
+
+    document.getElementById("retryBtn").addEventListener("click", () => {
+      const pauseTime = new Date().toISOString();
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr_code: currentCode, start_time, pause_time })
+      });
+      currentCode = "";
+      startTime = "";
+      document.getElementById("retryBtn").style.display = "none";
+      document.getElementById("nextBtn").style.display = "none";
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      currentCode = "";
+      startTime = "";
+      document.getElementById("retryBtn").style.display = "none";
+      document.getElementById("nextBtn").style.display = "none";
+    });
+  </script>
+</body>
+</html>
