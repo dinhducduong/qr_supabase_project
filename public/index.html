@@ -7,6 +7,8 @@
   <title>QR Scanner - Đóng Hàng</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm" type="module"></script>
+  <script src="https://qrscan-0531.restdb.io/assets/js/eventsource.min.js"></script>
+    <script src="https://qrscan-0531.restdb.io/rest/_jsapi.js"></script>
   <style>
     body {
       margin: 0;
@@ -109,6 +111,7 @@
             document.getElementById("retryBtn").style.display = "inline-block";
             document.getElementById("nextBtn").style.display = "inline-block";
             html5QrCode.stop();
+            
             fetch(API_URL, {
               method: 'POST',
               headers: {
@@ -143,9 +146,8 @@
           'cache-control': 'no-cache'
         },
         body: JSON.stringify({
-          qr_code: currentCode,
-          start_time,
-          pause_time: new Date().toISOString()
+          code: currentCode,
+          stop_time: new Date().toISOString()
         })
       })
         .then(res => res.json())
