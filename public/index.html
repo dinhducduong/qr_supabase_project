@@ -85,6 +85,7 @@
 
   <audio id="startAudio" src="./bat-dau-dong-hang.mp3"></audio>
   <audio id="beepAudio" src="./tieng_bip_mot_tieng.mp3"></audio>
+  <audio id="stopAudio" src="./stop.mp3"></audio>
 
   <script>
     let html5QrCode;
@@ -92,6 +93,7 @@
     let startTime = "";
     const startAudio = document.getElementById("startAudio");
     const beepAudio = document.getElementById("beepAudio");
+    const stopAudio = document.getElementById("stopAudio");
     const API_URL = 'https://qrscan-0531.restdb.io/rest/scans';
     const API_KEY = '551971c5d04eb9bd3c25ea6c088b2016cb8db';
     document.getElementById("startBtn").addEventListener("click", async () => {
@@ -157,6 +159,7 @@
       startTime = "";
       document.getElementById("retryBtn").style.display = "none";
       document.getElementById("nextBtn").style.display = "none";
+      stopAudio.play();
     });
 
     document.getElementById("nextBtn").addEventListener("click", () => {
