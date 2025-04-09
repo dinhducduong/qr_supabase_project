@@ -1,20 +1,83 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>QR Scanner - Đóng Hàng</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm" type="module"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f1f5f9;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+    }
 
+    h1 {
+      margin-top: 40px;
+      font-size: 24px;
+      color: #0f172a;
+    }
+
+    #reader {
+      width: 300px;
+      margin-top: 20px;
+      border: 2px dashed #64748b;
+      border-radius: 12px;
+      padding: 10px;
+      background-color: #fff;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+
+    button:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    audio {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h1>Quét mã QR để đóng hàng</h1>
-  <div id="reader" style="width: 300px;"></div>
-  <button id="startBtn">Bắt đầu quét mã</button>
-  <button id="retryBtn" style="display:none;">Quét lại</button>
-  <button id="nextBtn" style="display:none;">Đơn hàng tiếp theo</button>
+  <h1>📦 Quét mã QR để đóng hàng</h1>
+
+  <div id="reader"></div>
+
+  <div class="button-group">
+    <button id="startBtn">🔍 Bắt đầu quét mã</button>
+    <button id="retryBtn" style="display:none;">🔁 Quét lại</button>
+    <button id="nextBtn" style="display:none;">➡️ Đơn hàng tiếp theo</button>
+  </div>
 
   <audio id="startAudio" src="/bat-dau-dong-hang.mp3"></audio>
   <audio id="beepAudio" src="/tieng_bip_mot_tieng.mp3"></audio>
@@ -30,6 +93,7 @@
       html5QrCode = new Html5Qrcode("reader");
       const devices = await Html5Qrcode.getCameras();
       const backCamera = devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
+
       html5QrCode.start(
         backCamera.id,
         { fps: 10, qrbox: 250 },
@@ -39,15 +103,22 @@
             beepAudio.play();
             startAudio.play();
             startTime = new Date().toISOString();
-            document.getElementById("retryBtn").style.display = "inline";
-            document.getElementById("nextBtn").style.display = "inline";
+            document.getElementById("retryBtn").style.display = "inline-block";
+            document.getElementById("nextBtn").style.display = "inline-block";
             html5QrCode.stop();
             fetch('/api/log', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ qr_code: currentCode, start_time: startTime, pause_time: null })
+              body: JSON.stringify({
+                qr_code: currentCode,
+                start_time: startTime,
+                pause_time: null
+              })
             });
           }
+        },
+        errorMessage => {
+          // optional: handle scan errors
         }
       );
     });
@@ -57,7 +128,11 @@
       fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qr_code: currentCode, start_time, pause_time })
+        body: JSON.stringify({
+          qr_code: currentCode,
+          start_time,
+          pause_time
+        })
       });
       currentCode = "";
       startTime = "";
