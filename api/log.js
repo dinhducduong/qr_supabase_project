@@ -7,6 +7,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  console.log(112121212)
   if (req.method !== 'POST') return res.status(405).end();
 
   const { qr_code, start_time, pause_time } = req.body;
