@@ -106,13 +106,18 @@
     startBtn.addEventListener("click", async () => {
       html5QrCode = new Html5Qrcode("reader");
       const devices = await Html5Qrcode.getCameras();
-      const camera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+      if (!devices || devices.length === 0) {
+        alert("❌ Không tìm thấy camera nào.");
+        return;
+      }
+      const backCamera = devices.find(device => device.label.toLowerCase().includes('back'));
+      const selectedCamera = backCamera || devices[0];
 
-      html5QrCode.start(
-        camera.id,
+      await html5QrCode.start(
+        { deviceId: { exact: selectedCamera.id } },
         { fps: 10, qrbox: 250 },
-        handleQRCode,
-        () => { }
+        qrCodeMessage => handleQRCode(qrCodeMessage),
+        errorMessage => { /* Bỏ qua lỗi trong quá trình quét */ }
       );
     });
 
