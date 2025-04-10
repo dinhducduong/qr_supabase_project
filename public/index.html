@@ -138,15 +138,15 @@
 
     function checkAndHandleOrder(code) {
       $.ajax({
-        url: API_URL,
+        url: `${API_URL}` + `?tracking_code=${code}`,
         method: "GET",
         headers,
-        data: { q: JSON.stringify({ tracking_code: code }) },
         success: function (results) {
+          console.log(results)
           if (results.length > 0) {
             const record = results[0];
 
-            if (record.start_time && record.stop_time) {
+            if (record.start_time && record.stop_time && record.tracking_code === code) {
 
               alert("❌ Đơn hàng này đã được đóng xong!");
 
@@ -176,7 +176,7 @@
         url: `${API_URL}/${id}`,
         method: "PATCH",
         headers,
-        data: JSON.stringify(data),
+        data: JSON.stringify({"id": id,"tracking_code": data.tracking_code ,"start_time": data.start_time,"stop_time": new Date().toISOString()}),
         success: function () {
           alert(successMessage);
         }
@@ -247,7 +247,7 @@
     }
 
     function showActionButtons() {
-      retryBtn.style.display = "inline-block";
+      // retryBtn.style.display = "inline-block";
       nextBtn.style.display = "inline-block";
     }
   </script>
