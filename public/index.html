@@ -103,21 +103,23 @@
     const retryBtn = document.getElementById("retryBtn");
     const nextBtn = document.getElementById("nextBtn");
 
-    startBtn.addEventListener("click", async () => {
+    function handleScan() {
       html5QrCode = new Html5Qrcode("reader");
-      const devices = await Html5Qrcode.getCameras();
-      console.log(devices)
+      const devices = Html5Qrcode.getCameras();
       if (!devices || devices.length === 0) {
         alert("❌ Không tìm thấy camera nào.");
         return;
       }
-      
-      await html5QrCode.start(
+
+      html5QrCode.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         qrCodeMessage => handleQRCode(qrCodeMessage),
         errorMessage => { /* Bỏ qua lỗi trong quá trình quét */ }
       );
+    }
+    startBtn.addEventListener("click", async () => {
+      await handleScan()
     });
 
     function handleQRCode(qrCodeMessage) {
@@ -126,10 +128,10 @@
       currentCode = qrCodeMessage;
       startTime = new Date().toISOString();
       beepAudio.play();
-      startAudio.play();
+      
       showActionButtons();
-
       html5QrCode.stop();
+      
       checkAndHandleOrder(currentCode);
     }
 
@@ -144,7 +146,9 @@
             const record = results[0];
 
             if (record.start_time && record.stop_time) {
+              
               alert("❌ Đơn hàng này đã được đóng xong!");
+
             } else {
               const data = {
                 checking_code: code,
@@ -166,6 +170,7 @@
     }
 
     function updateOrder(id, data, successMessage) {
+      beepAudio.play();
       $.ajax({
         url: `${API_URL}/${id}`,
         method: "PUT",
@@ -178,6 +183,7 @@
     }
 
     function createNewOrder(code, time) {
+      startAudio.play();
       $.ajax({
         url: API_URL,
         method: "POST",
@@ -188,26 +194,39 @@
           stop_time: null
         }),
         success: function () {
-          console.log("✅ Đã tạo mới bản ghi.");
+          console.log("✅ Đã tạo đơn hàng mới.");
         },
         error: function () {
-          alert("❌ Lỗi khi tạo bản ghi mới.");
+          alert("❌ Lỗi khi tạo đơn hàng mới.");
         }
       });
     }
 
-    retryBtn.addEventListener("click", () => {
+    retryBtn.addEventListener("click", async () => {
       if (!currentCode) return;
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => handleQRCode(qrCodeMessage),
+        errorMessage => { /* Bỏ qua lỗi trong quá trình quét */ }
+      );
       stopAudio.play();
+      html5QrCode = new Html5Qrcode("reader");
+      const devices = Html5Qrcode.getCameras();
+      if (!devices || devices.length === 0) {
+        alert("❌ Không tìm thấy camera nào.");
+        return;
+      }
 
       $.ajax({
         url: API_URL,
         method: "GET",
         headers,
-        data: { q: JSON.stringify({ code: currentCode }) },
+        data: { q: JSON.stringify({ checking_code: currentCode }) },
         success: function (results) {
+          console.log(results)
           if (results.length > 0) {
-            updateOrder(results[0]._id, { stop_time: new Date().toISOString() }, "✅ Đã cập nhật khi retry.");
+            updateOrder(results[0]._id, {"checking_code": currentCode, "start_time": results[0].start_time, stop_time: new Date().toISOString() }, "✅ Đã cập nhật đơn hàng.");
           }
         }
       });
