@@ -5,9 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QR Scanner - Đóng Hàng</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <script src="https://qrscan-0531.restdb.io/rest/_jsapi.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -85,12 +84,16 @@
   <audio id="stopAudio" src="./stop.mp3"></audio>
 
   <script>
-    const API_URL = 'https://qrscan-0531.restdb.io/rest/scans';
-    const API_KEY = '551971c5d04eb9bd3c25ea6c088b2016cb8db';
+    const API_URL = 'https://qrscan-0531.restdb.io/rest/orders';
+    const API_KEY = '67f6a3f41db1aef1a5349d56';
 
-    let html5QrCode;
-    let currentCode = "";
-    let startTime = "";
+    let html5QrCode, currentCode = "", startTime = "";
+
+    const headers = {
+      "content-type": "application/json",
+      "x-apikey": API_KEY,
+      "cache-control": "no-cache"
+    };
 
     const startAudio = document.getElementById("startAudio");
     const beepAudio = document.getElementById("beepAudio");
@@ -100,85 +103,110 @@
     const retryBtn = document.getElementById("retryBtn");
     const nextBtn = document.getElementById("nextBtn");
 
-    const axiosConfig = {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-apikey': API_KEY,
-        'cache-control': 'no-cache'
-      }
-    };
-
     startBtn.addEventListener("click", async () => {
       html5QrCode = new Html5Qrcode("reader");
       const devices = await Html5Qrcode.getCameras();
-      const camera = devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
+      const camera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
 
       html5QrCode.start(
         camera.id,
         { fps: 10, qrbox: 250 },
-        qrCodeMessage => handleQRCode(qrCodeMessage),
-        errorMessage => { }
+        handleQRCode,
+        () => { }
       );
     });
 
-    async function handleQRCode(qrCodeMessage) {
+    function handleQRCode(qrCodeMessage) {
       if (qrCodeMessage === currentCode) return;
 
       currentCode = qrCodeMessage;
+      startTime = new Date().toISOString();
       beepAudio.play();
       startAudio.play();
-      startTime = new Date().toISOString();
-
-      retryBtn.style.display = "inline-block";
-      nextBtn.style.display = "inline-block";
+      showActionButtons();
 
       html5QrCode.stop();
-
-      try {
-        const res = await axios.get(`${API_URL}?q={"code":"${currentCode}"}`, axiosConfig);
-        const results = res.data;
-        if (results.length > 0) {
-          const record = results[0];
-          if (record.start_time && record.stop_time) {
-            alert("❌ Đơn hàng này đã được đóng xong!");
-          } else {
-            await axios.put(`${API_URL}/${record._id}`, {
-              stop_time: new Date().toISOString()
-            }, axiosConfig);
-            alert("✅ Đã cập nhật thời gian kết thúc.");
-          }
-        } else {
-          await axios.post(API_URL, {
-            code: currentCode,
-            start_time: startTime,
-            stop_time: null
-          }, axiosConfig);
-          console.log("✅ Đã tạo mới bản ghi.");
-        }
-      } catch (error) {
-        console.error("❌ Lỗi API:", error);
-        alert("Có lỗi xảy ra khi gọi API. Kiểm tra kết nối hoặc cấu hình API.");
-      }
+      checkAndHandleOrder(currentCode);
     }
 
-    retryBtn.addEventListener("click", async () => {
-      if (!currentCode) return;
+    function checkAndHandleOrder(code) {
+      $.ajax({
+        url: API_URL,
+        method: "GET",
+        headers,
+        data: { q: JSON.stringify({ checking_code: code }) },
+        success: function (results) {
+          if (results.length > 0) {
+            const record = results[0];
 
+            if (record.start_time && record.stop_time) {
+              alert("❌ Đơn hàng này đã được đóng xong!");
+            } else {
+              const data = {
+                checking_code: code,
+                start_time: record.start_time || startTime,
+                stop_time: new Date().toISOString()
+              };
+
+              updateOrder(record._id, data, "✅ Đã cập nhật thời gian kết thúc.");
+            }
+          } else {
+            createNewOrder(code, startTime);
+          }
+        },
+        error: () => {
+          console.error("❌ API lỗi khi kiểm tra đơn hàng.");
+          alert("⚠️ Lỗi gọi API. Kiểm tra kết nối.");
+        }
+      });
+    }
+
+    function updateOrder(id, data, successMessage) {
+      $.ajax({
+        url: `${API_URL}/${id}`,
+        method: "PUT",
+        headers,
+        data: JSON.stringify(data),
+        success: function () {
+          alert(successMessage);
+        }
+      });
+    }
+
+    function createNewOrder(code, time) {
+      $.ajax({
+        url: API_URL,
+        method: "POST",
+        headers,
+        data: JSON.stringify({
+          checking_code: code,
+          start_time: time,
+          stop_time: null
+        }),
+        success: function () {
+          console.log("✅ Đã tạo mới bản ghi.");
+        },
+        error: function () {
+          alert("❌ Lỗi khi tạo bản ghi mới.");
+        }
+      });
+    }
+
+    retryBtn.addEventListener("click", () => {
+      if (!currentCode) return;
       stopAudio.play();
 
-      try {
-        const res = await axios.get(`${API_URL}?q={"code":"${currentCode}"}`, axiosConfig);
-        const results = res.data;
-        if (results.length > 0) {
-          const record = results[0];
-          await axios.put(`${API_URL}/${record._id}`, {
-            stop_time: new Date().toISOString()
-          }, axiosConfig);
-          console.log("✅ Đã cập nhật khi retry.");
+      $.ajax({
+        url: API_URL,
+        method: "GET",
+        headers,
+        data: { q: JSON.stringify({ code: currentCode }) },
+        success: function (results) {
+          if (results.length > 0) {
+            updateOrder(results[0]._id, { stop_time: new Date().toISOString() }, "✅ Đã cập nhật khi retry.");
+          }
         }
-      } catch (error) {
-        console.error("❌ Retry error:", error);
-      }
+      });
 
       resetState();
     });
@@ -193,8 +221,12 @@
       retryBtn.style.display = "none";
       nextBtn.style.display = "none";
     }
-  </script>
 
+    function showActionButtons() {
+      retryBtn.style.display = "inline-block";
+      nextBtn.style.display = "inline-block";
+    }
+  </script>
 </body>
 
 </html>
