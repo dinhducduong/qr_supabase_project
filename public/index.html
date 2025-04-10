@@ -84,8 +84,9 @@
   <audio id="stopAudio" src="./stop.mp3"></audio>
 
   <script>
-    const API_URL = 'https://qrscan-0531.restdb.io/rest/orders';
+    const API_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:ZgWlHQgO/orders';
     const API_KEY = '67f6a3f41db1aef1a5349d56';
+    
 
     let html5QrCode, currentCode = "", startTime = "";
 
@@ -128,10 +129,10 @@
       currentCode = qrCodeMessage;
       startTime = new Date().toISOString();
       beepAudio.play();
-      
+
       showActionButtons();
       html5QrCode.stop();
-      
+
       checkAndHandleOrder(currentCode);
     }
 
@@ -140,23 +141,23 @@
         url: API_URL,
         method: "GET",
         headers,
-        data: { q: JSON.stringify({ checking_code: code }) },
+        data: { q: JSON.stringify({ tracking_code: code }) },
         success: function (results) {
           if (results.length > 0) {
             const record = results[0];
 
             if (record.start_time && record.stop_time) {
-              
+
               alert("❌ Đơn hàng này đã được đóng xong!");
 
             } else {
               const data = {
-                checking_code: code,
+                tracking_code: code,
                 start_time: record.start_time || startTime,
                 stop_time: new Date().toISOString()
               };
 
-              updateOrder(record._id, data, "✅ Đã cập nhật thời gian kết thúc.");
+              updateOrder(record.id, data, "✅ Đã cập nhật thời gian kết thúc.");
             }
           } else {
             createNewOrder(code, startTime);
@@ -173,7 +174,7 @@
       beepAudio.play();
       $.ajax({
         url: `${API_URL}/${id}`,
-        method: "PUT",
+        method: "PATCH",
         headers,
         data: JSON.stringify(data),
         success: function () {
@@ -189,7 +190,7 @@
         method: "POST",
         headers,
         data: JSON.stringify({
-          checking_code: code,
+          tracking_code: code,
           start_time: time,
           stop_time: null
         }),
@@ -222,11 +223,11 @@
         url: API_URL,
         method: "GET",
         headers,
-        data: { q: JSON.stringify({ checking_code: currentCode }) },
+        data: { q: JSON.stringify({ tracking_code: currentCode }) },
         success: function (results) {
           console.log(results)
           if (results.length > 0) {
-            updateOrder(results[0]._id, {"checking_code": currentCode, "start_time": results[0].start_time, stop_time: new Date().toISOString() }, "✅ Đã cập nhật đơn hàng.");
+            updateOrder(results[0].id, { "tracking_code": currentCode, "start_time": results[0].start_time, stop_time: new Date().toISOString() }, "✅ Đã cập nhật đơn hàng.");
           }
         }
       });
