@@ -106,13 +106,12 @@
     startBtn.addEventListener("click", async () => {
       html5QrCode = new Html5Qrcode("reader");
       const devices = await Html5Qrcode.getCameras();
+      console.log(devices)
       if (!devices || devices.length === 0) {
         alert("❌ Không tìm thấy camera nào.");
         return;
       }
-      const backCamera = devices.find(device => device.label.toLowerCase().includes('back'));
-      const selectedCamera = backCamera || devices[0];
-
+      
       await html5QrCode.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
