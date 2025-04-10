@@ -114,7 +114,7 @@
       const selectedCamera = backCamera || devices[0];
 
       await html5QrCode.start(
-        { deviceId: { exact: selectedCamera.id } },
+        { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         qrCodeMessage => handleQRCode(qrCodeMessage),
         errorMessage => { /* Bỏ qua lỗi trong quá trình quét */ }
